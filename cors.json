@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["http://localhost", "http://localhost:52589", "https://hyellow-w.web.app", "*"],
+    "responseHeader": ["Content-Type"],
+    "method": ["GET", "HEAD", "OPTIONS"],
+    "maxAgeSeconds": 3600
+  }
+]

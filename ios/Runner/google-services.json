@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "476459213996",
+    "project_id": "hyellow-w",
+    "storage_bucket": "hyellow-w.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476459213996:android:d2425bf52d4d9c50caeb09",
+        "android_client_info": {
+          "package_name": "com.example.hyellow_w"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5ZbpNB-0Pma2Sn3tx1mhQlHTvDVsr3TM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

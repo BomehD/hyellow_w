@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "476459213996",
+    "project_id": "hyellow-w",
+    "storage_bucket": "hyellow-w.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:476459213996:android:d2425bf52d4d9c50caeb09",
+        "android_client_info": {
+          "package_name": "com.example.hyellow_w"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "476459213996-o8gh07mnvgm6lneqhul1oth1776ta2ek.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hyellow_w",
+            "certificate_hash": "84b59e01f8350eb87334bdb369dfed897a763449"
+          }
+        },
+        {
+          "client_id": "476459213996-iqscnlhtr3cidtmrhru9o60pio3lde58.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5ZbpNB-0Pma2Sn3tx1mhQlHTvDVsr3TM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "476459213996-iqscnlhtr3cidtmrhru9o60pio3lde58.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "476459213996-6m9v344l5f8g8r94f6tckqhs4bfljtlj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.hyelloww"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

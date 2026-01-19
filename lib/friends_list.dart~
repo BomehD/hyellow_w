@@ -1,0 +1,154 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'chat_detail_screen.dart';
+import 'fullscreen_image_viewer.dart';
+
+class FriendsList extends StatelessWidget {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<List<Map<String, dynamic>>> _getFriendsList() async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception('No user is logged in');
+
+    String userId = currentUser.uid;
+
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection('Friends')
+        .doc(userId)
+        .get();
+
+    if (!userDoc.exists || userDoc.data() == null) {
+      return [];
+    }
+
+    Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+
+    List<dynamic> following = userData['following'] ?? [];
+    List<dynamic> followers = userData['followers'] ?? [];
+
+    List<Map<String, dynamic>> friends = [];
+
+    for (var friendId in following) {
+      var friendData = await _fetchFriendData(friendId);
+      if (friendData != null) friends.add(friendData);
+    }
+
+    for (var friendId in followers) {
+      if (!friends.any((f) => f['id'] == friendId)) {
+        var friendData = await _fetchFriendData(friendId);
+        if (friendData != null) friends.add(friendData);
+      }
+    }
+
+    return friends;
+  }
+
+  Future<Map<String, dynamic>?> _fetchFriendData(String friendId) async {
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(friendId)
+        .get();
+
+    if (!userDoc.exists) return null;
+
+    DocumentSnapshot profileDoc = await FirebaseFirestore.instance
+        .collection('profiles')
+        .doc(friendId)
+        .get();
+
+    var interests = userDoc['interests'] as List<dynamic>?;
+    String interest = (interests != null && interests.isNotEmpty)
+        ? interests[0]
+        : 'General';
+
+    return {
+      'id': friendId,
+      'name': userDoc['name'] ?? 'No Name',
+      'profileImage': profileDoc.exists ? profileDoc['profileImage'] : null,
+      'interest': interest,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Friends List', style: TextStyle(
+          color: Color(0xFF106C70), fontSize: 13,
+        ),
+        ),
+
+      ),
+      body: Center(
+        child: Container(
+          width: MediaQuery.of(context).size.width > 600 ? 200 : double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _getFriendsList(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return Center(child: Text('No friends to display.'));
+              }
+
+              final friends = snapshot.data!;
+              return ListView.builder(
+                itemCount: friends.length,
+                itemBuilder: (context, index) {
+                  final friend = friends[index];
+                  return ListTile(
+                    leading: GestureDetector(
+                      onTap: () {
+                        if (friend['profileImage'] != null) {
+                          showFullscreenImage(context, friend['profileImage']);
+                        }
+                      },
+                      child: CircleAvatar(
+                        backgroundImage: friend['profileImage'] != null && friend['profileImage'] != ''
+                            ? NetworkImage(friend['profileImage'])
+                            : const AssetImage('assets/default_profile_image.png'),
+                      ),
+
+                    ),
+                    title: Text(friend['name']),
+                    subtitle: Text(
+                      friend['interest'],
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    onTap: () {
+                      Map<String, dynamic> friendData = {
+                        'id': friend['id'] ?? '',
+                        'userId': friend['userId'] ?? friend['id'] ?? '',
+                        'name': friend['name'] ?? 'Unknown',
+                        'profileImage': friend['profileImage'] ?? '',
+                        'interest': friend['interest'] ?? '',
+                      };
+
+                      if (friendData['userId'] == '') {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Friend userId is missing. Cannot open chat.')),
+                        );
+                        return;
+                      }
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatDetailScreen(friend: friendData),
+                        ),
+                      );
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+
+    );
+  }
+}
