@@ -138,13 +138,14 @@ class _MessageBubbleState extends State<MessageBubble> with TickerProviderStateM
   Color _getStatusIconColor(ColorScheme colorScheme) {
     if (widget.isMe) {
       if (widget.message.readBy.containsKey(widget.friendId)) {
-        return colorScheme.primary;
+        return colorScheme.primary; // read = accent color
       } else {
-        return colorScheme.onPrimary.withOpacity(0.7);
+        return colorScheme.onSurface.withOpacity(0.6); // unread = neutral
       }
     }
     return Colors.transparent;
   }
+
 
   Future<String?> _getDownloadedFilePath(String fileName, String mediaType) async {
     Directory? baseDir;
