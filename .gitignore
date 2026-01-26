@@ -35,3 +35,10 @@ macos/Flutter/ephemeral/
 # Windows/Linux Flutter ephemeral
 windows/flutter/ephemeral/
 linux/flutter/ephemeral/
+# API Keys and Secrets
+.env
+.env.local
+.env.*
+
+# Firebase keys
+serviceAccountKey.json
