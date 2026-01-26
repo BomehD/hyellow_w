@@ -8,11 +8,15 @@ import * as functions from "firebase-functions";
 
 initializeApp();
 
-// 1. Properly define the Secret reference using a unique variable name
-const GEMINI_SECRET = defineSecret("GEMINI_API_KEY");
+/**
+ * 1. Map the Secret to a NEW local name: AI_SECRET_KEY
+ * This avoids the 400 "overlap" error because it creates a new slot
+ * that doesn't conflict with the "ghost" GEMINI_API_KEY env variable.
+ */
+const AI_SECRET_KEY = defineSecret("GEMINI_API_KEY");
 
 export const generateAiResponse = onCall({
-  secrets: [GEMINI_SECRET],
+  secrets: [AI_SECRET_KEY],
   region: "us-central1",
 }, async (request) => {
 
@@ -21,8 +25,8 @@ export const generateAiResponse = onCall({
     throw new HttpsError("unauthenticated", "User must be signed in.");
   }
 
-  // 2. Access the secret value once at the start of the handler
-  const apiKey = GEMINI_SECRET.value();
+  // 2. Access the value using the new mapping name
+  const apiKey = AI_SECRET_KEY.value();
 
   const {context, messages, userRequest} = request.data as {
     context: string;
