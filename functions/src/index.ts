@@ -1,6 +1,6 @@
 /* eslint-disable max-len */
-import {onCall, HttpsError} from "firebase-functions/v2/https"; // Added HttpsError
-import {defineSecret} from "firebase-functions/params"; // Added Secret Manager support
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {defineSecret} from "firebase-functions/params";
 import {initializeApp} from "firebase-admin/app";
 import {GoogleGenerativeAI, Content, Part} from "@google/generative-ai";
 import axios from "axios";
@@ -8,19 +8,21 @@ import * as functions from "firebase-functions";
 
 initializeApp();
 
-// 1. Properly define the Secret reference
-// Change the variable name to something unique like 'GEMINI_SECRET'
+// 1. Properly define the Secret reference using a unique variable name
 const GEMINI_SECRET = defineSecret("GEMINI_API_KEY");
 
 export const generateAiResponse = onCall({
-  secrets: [GEMINI_SECRET], // Use the new variable name here
+  secrets: [GEMINI_SECRET],
   region: "us-central1",
 }, async (request) => {
-  const apiKey = GEMINI_SECRET.value();
-  // Use HttpsError so Flutter gets a clean error code
+
+  // Auth Check
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be signed in.");
   }
+
+  // 2. Access the secret value once at the start of the handler
+  const apiKey = GEMINI_SECRET.value();
 
   const {context, messages, userRequest} = request.data as {
     context: string;
@@ -40,19 +42,18 @@ export const generateAiResponse = onCall({
   let liveFact = "";
 
   try {
-    // 3. Access the secret value inside the handler
-    const apiKey = GEMINI_API_KEY.value();
+    // 3. Use the apiKey defined above
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({model: "gemini-3-flash-preview"});
 
     // --- STEP 1: Classification ---
-    const classificationPrompt = `Analyze the user's query and determine if it requires a real-time search... Query: ${userRequest}`;
+    const classificationPrompt = `Analyze the user's query and determine if it requires a real-time search for up-to-date information. Respond with only "YES" or "NO".\nQuery: ${userRequest}`;
     const classificationResult = await model.generateContent(classificationPrompt);
     const requiresSearch = classificationResult.response.text().trim().toUpperCase() === "YES";
 
     // --- STEP 2: Search ---
     if (requiresSearch) {
-      const queryGenerationPrompt = `Generate the single best search query... User's query: ${userRequest}`;
+      const queryGenerationPrompt = `Generate the single best search query for the following user request. Only provide the search query.\nUser's query: ${userRequest}`;
       const queryGenerationResult = await model.generateContent(queryGenerationPrompt);
       const searchQuery = queryGenerationResult.response.text().trim();
 
@@ -98,7 +99,6 @@ export const generateAiResponse = onCall({
 
   } catch (error: any) {
     console.error("AI Error:", error);
-    // Explicitly pass the error message back to Flutter
     throw new HttpsError("internal", error.message || "Unknown AI error.");
   }
 });
