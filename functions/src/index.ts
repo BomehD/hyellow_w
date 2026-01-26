@@ -9,13 +9,14 @@ import * as functions from "firebase-functions";
 initializeApp();
 
 // 1. Properly define the Secret reference
-const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+// Change the variable name to something unique like 'GEMINI_SECRET'
+const GEMINI_SECRET = defineSecret("GEMINI_API_KEY");
 
-// 2. Add the secret to the configuration object
 export const generateAiResponse = onCall({
-  secrets: [GEMINI_API_KEY], // This is the "bridge" to your new key
+  secrets: [GEMINI_SECRET], // Use the new variable name here
   region: "us-central1",
 }, async (request) => {
+  const apiKey = GEMINI_SECRET.value();
   // Use HttpsError so Flutter gets a clean error code
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be signed in.");
