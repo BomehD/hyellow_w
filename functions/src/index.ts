@@ -8,15 +8,13 @@ import * as functions from "firebase-functions";
 
 initializeApp();
 
-/**
- * 1. Map the Secret to a NEW local name: AI_SECRET_KEY
- * This avoids the 400 "overlap" error because it creates a new slot
- * that doesn't conflict with the "ghost" GEMINI_API_KEY env variable.
+/** * We map the vault secret "GEMINI_API_KEY" to a local variable.
+ * Now that the .env file is deleted, there is no longer a conflict.
  */
-const AI_SECRET_KEY = defineSecret("GEMINI_API_KEY");
+const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
 export const generateAiResponse = onCall({
-  secrets: [AI_SECRET_KEY],
+  secrets: [GEMINI_API_KEY],
   region: "us-central1",
 }, async (request) => {
 
@@ -25,8 +23,8 @@ export const generateAiResponse = onCall({
     throw new HttpsError("unauthenticated", "User must be signed in.");
   }
 
-  // 2. Access the value using the new mapping name
-  const apiKey = AI_SECRET_KEY.value();
+  // Use the secret value
+  const apiKey = GEMINI_API_KEY.value();
 
   const {context, messages, userRequest} = request.data as {
     context: string;
@@ -46,7 +44,6 @@ export const generateAiResponse = onCall({
   let liveFact = "";
 
   try {
-    // 3. Use the apiKey defined above
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({model: "gemini-3-flash-preview"});
 

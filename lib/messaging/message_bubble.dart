@@ -137,10 +137,15 @@ class _MessageBubbleState extends State<MessageBubble> with TickerProviderStateM
 
   Color _getStatusIconColor(ColorScheme colorScheme) {
     if (widget.isMe) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       if (widget.message.readBy.containsKey(widget.friendId)) {
-        return colorScheme.primary; // read = accent color
+        // Read status - use a color that contrasts with the bubble
+        return isDark ? colorScheme.primary : colorScheme.onPrimary;
       } else {
-        return colorScheme.onSurface.withOpacity(0.6); // unread = neutral
+        // Unread status - use a muted color
+        return isDark
+            ? colorScheme.onSurface.withOpacity(0.6)
+            : colorScheme.onPrimary.withOpacity(0.7);
       }
     }
     return Colors.transparent;
