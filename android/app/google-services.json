@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "476459213996-n0o1vgrrl87abnrp9ijccnkfguo43j0d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hyellow_w",
+            "certificate_hash": "fc0b02f72243807868995e4545552b0bdf3b8025"
+          }
+        },
+        {
           "client_id": "476459213996-o8gh07mnvgm6lneqhul1oth1776ta2ek.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

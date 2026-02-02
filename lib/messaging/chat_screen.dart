@@ -560,12 +560,20 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           onPressed: () async {
             final selectedFriend = await Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const FriendsList(),
-              ),
+              MaterialPageRoute(builder: (context) => const FriendsList()),
             );
 
             if (selectedFriend != null && mounted) {
+
+              // FIX: Manually inject the friend's data into the local cache
+              setState(() {
+                profilesData[selectedFriend['id']] = {
+                  'name': selectedFriend['name'],
+                  'profileImage': selectedFriend['profileImage'],
+                  'userId': selectedFriend['userId'],
+                };
+              });
+
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(

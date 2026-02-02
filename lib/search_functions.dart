@@ -2,14 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<List<Map<String, dynamic>>> searchUsersByName(String query) async {
   final firestore = FirebaseFirestore.instance;
-
   final lowercaseQuery = query.toLowerCase();
 
-  // Step 1: Fetch users (limit added for performance)
+  // Step 1: Fetch users
   final usersSnapshot = await firestore
       .collection('users')
       .orderBy('name_lower')
-      .limit(100) // You can increase this if needed
+      .limit(100)
       .get();
 
   List<Map<String, dynamic>> results = [];
@@ -19,17 +18,15 @@ Future<List<Map<String, dynamic>>> searchUsersByName(String query) async {
     final userData = userDoc.data();
     final name = userData['name']?.toLowerCase() ?? '';
 
-    // Step 2: Check if query is in any part of the name
+    // Step 2: Local Filter
     if (name.contains(lowercaseQuery)) {
-      // Step 3: Attempt to get matching profile
-      final profileDoc = await firestore.collection('profiles').doc(userId).get();
-      final profileData = profileDoc.data();
-
+      // Step 3: Pull data directly from userData (users collection)
       results.add({
         'id': userId,
         'name': userData['name'] ?? '',
-        'interest': profileData?['interest'] ?? '',
-        'profileImage': profileData?['profileImage'] ?? '',
+        // Updated: Accessing 'interest' from the current user document
+        'interest': userData['interest'] ?? 'No interest listed',
+        'profileImage': userData['profileImage'] ?? '',
       });
     }
   }
