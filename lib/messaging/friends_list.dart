@@ -93,8 +93,8 @@ class _FriendsListState extends State<FriendsList> {
     }
 
     Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-
-    Map<String, dynamic> followingMetadata = userData['followingMetadata'] as Map<String, dynamic>? ?? {};
+    Map<String, dynamic> followingMetadata =
+        userData['followingMetadata'] as Map<String, dynamic>? ?? {};
     Set<String> friendIds = followingMetadata.keys.toSet();
 
     if (friendIds.isEmpty) {
@@ -102,27 +102,34 @@ class _FriendsListState extends State<FriendsList> {
     }
 
     List<Map<String, dynamic>> friends = [];
-
     const int chunkSize = 10;
     List<String> friendIdsList = friendIds.toList();
+
     for (int i = 0; i < friendIdsList.length; i += chunkSize) {
-      final chunk = friendIdsList.sublist(i, i + chunkSize > friendIdsList.length ? friendIdsList.length : i + chunkSize);
+      final chunk = friendIdsList.sublist(
+          i, i + chunkSize > friendIdsList.length ? friendIdsList.length : i + chunkSize);
+
       var usersSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where(FieldPath.documentId, whereIn: chunk)
           .get();
+
       var profilesSnapshot = await FirebaseFirestore.instance
           .collection('profiles')
           .where(FieldPath.documentId, whereIn: chunk)
           .get();
 
-      Map<String, DocumentSnapshot> profilesMap = {for (var doc in profilesSnapshot.docs) doc.id: doc};
+      Map<String, DocumentSnapshot> profilesMap = {
+        for (var doc in profilesSnapshot.docs) doc.id: doc
+      };
 
       for (var userDoc in usersSnapshot.docs) {
         final friendId = userDoc.id;
+        final userData = userDoc.data();
         final profileDoc = profilesMap[friendId];
 
-        dynamic rawInterest = userDoc['interest'] ?? userDoc['interests'];
+        // SAFE INTEREST ACCESS
+        dynamic rawInterest = userData['interest'] ?? userData['interests'];
         String interest;
         if (rawInterest is List && rawInterest.isNotEmpty) {
           interest = rawInterest.first.toString();
@@ -132,10 +139,17 @@ class _FriendsListState extends State<FriendsList> {
           interest = 'General';
         }
 
+        // SAFE PROFILE IMAGE ACCESS
+        String? profileImage;
+        if (profileDoc != null && profileDoc.exists && profileDoc.data() != null) {
+          final profileData = profileDoc.data() as Map<String, dynamic>;
+          profileImage = profileData['profileImage'] as String?;
+        }
+
         friends.add({
           'id': friendId,
-          'name': userDoc['name'] ?? 'No Name',
-          'profileImage': profileDoc?.exists == true ? profileDoc!['profileImage'] : null,
+          'name': userData['name'] ?? 'No Name',
+          'profileImage': profileImage,
           'interest': interest,
         });
       }
@@ -143,7 +157,6 @@ class _FriendsListState extends State<FriendsList> {
     return friends;
   }
 
-  // Helper function to show a fullscreen image
   void _showFullscreenImage(BuildContext context, String imageUrl, String heroTag) {
     if (imageUrl.isNotEmpty) {
       Navigator.push(
@@ -158,14 +171,13 @@ class _FriendsListState extends State<FriendsList> {
     }
   }
 
-  // New helper method for responsive layout
   double _getContentWidth(double screenWidth) {
     if (screenWidth >= 1200) {
-      return 600; // Fixed width for large desktops
+      return 600;
     } else if (screenWidth >= 800) {
-      return screenWidth * 0.65; // 65% for tablets
+      return screenWidth * 0.65;
     } else {
-      return screenWidth; // Full width for mobile
+      return screenWidth;
     }
   }
 
@@ -203,7 +215,8 @@ class _FriendsListState extends State<FriendsList> {
                 )
                     : null,
                 border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                contentPadding:
+                const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
               ),
               style: const TextStyle(fontSize: 16.0),
             ),
@@ -223,7 +236,9 @@ class _FriendsListState extends State<FriendsList> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    _searchQuery.isNotEmpty ? Icons.person_search_outlined : Icons.people_alt_outlined,
+                    _searchQuery.isNotEmpty
+                        ? Icons.person_search_outlined
+                        : Icons.people_alt_outlined,
                     size: 70,
                     color: Colors.grey[200],
                   ),
@@ -248,9 +263,9 @@ class _FriendsListState extends State<FriendsList> {
             itemBuilder: (context, index) {
               final friend = _filteredFriends[index];
               String? profileImageUrl = friend['profileImage'];
-              bool isAssetImage = profileImageUrl == null || profileImageUrl.isEmpty;
+              bool isAssetImage =
+                  profileImageUrl == null || profileImageUrl.isEmpty;
               String friendId = friend['id'] ?? '';
-
               String heroTag = 'friend-profile-$friendId';
 
               return Column(
@@ -270,7 +285,9 @@ class _FriendsListState extends State<FriendsList> {
                         tag: heroTag,
                         child: CircleAvatar(
                           backgroundImage: isAssetImage
-                              ? const AssetImage('assets/default_profile_image.png') as ImageProvider
+                              ? const AssetImage(
+                              'assets/default_profile_image.png')
+                          as ImageProvider
                               : NetworkImage(profileImageUrl!),
                           backgroundColor: Colors.grey[200],
                         ),
@@ -282,7 +299,8 @@ class _FriendsListState extends State<FriendsList> {
                     ),
                     subtitle: Text(
                       friend['interest'],
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(
+                          fontSize: 12, color: Colors.grey),
                     ),
                     onTap: () {
                       Map<String, dynamic> friendData = {
@@ -294,7 +312,9 @@ class _FriendsListState extends State<FriendsList> {
 
                       if (friendData['userId'].isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Friend userId is missing. Cannot open chat.')),
+                          const SnackBar(
+                              content: Text(
+                                  'Friend userId is missing. Cannot open chat.')),
                         );
                         return;
                       }

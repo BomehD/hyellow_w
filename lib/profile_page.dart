@@ -125,9 +125,13 @@ class _ProfilePageState extends State<ProfilePage> {
       DocumentReference profileRef = FirebaseFirestore.instance.collection('profiles').doc(uid);
       DocumentSnapshot docSnapshot = await profileRef.get();
 
-      String previousImage = docSnapshot.exists && docSnapshot['profileImage'] != null
-          ? docSnapshot['profileImage']
-          : 'assets/default_profile_image.png';
+      String previousImage = 'assets/default_profile_image.png';
+
+      if (docSnapshot.exists && docSnapshot.data() != null) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        previousImage = data['profileImage'] as String? ?? previousImage;
+      }
+
 
       String finalImageUrl = imageUrl ?? previousImage;
 

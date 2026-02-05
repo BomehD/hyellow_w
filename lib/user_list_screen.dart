@@ -54,7 +54,9 @@ class _UserListScreenState extends State<UserListScreen> {
           followingList = metadata.keys.toSet();
         }
 
-        setState(() {});
+        if (mounted) {
+          setState(() {});
+        }
       }
     } catch (e) {
       debugPrint("Error fetching preferences: $e");
@@ -144,6 +146,85 @@ class _UserListScreenState extends State<UserListScreen> {
     );
   }
 
+  Widget _buildOfflineStateWithPlaceholders(BuildContext context) {
+    final theme = Theme.of(context);
+    return Stack(
+      children: [
+        // Placeholders in the background
+        ListView.builder(
+          itemCount: 5,
+          itemBuilder: (context, index) => _buildUserPlaceholder(context),
+        ),
+        // Offline banner on top
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.wifi_off,
+                  color: theme.colorScheme.onErrorContainer,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No Internet Connection',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Check your connection and try again',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onErrorContainer.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(
+                    Icons.refresh,
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      // This will trigger a rebuild and retry
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -174,9 +255,21 @@ class _UserListScreenState extends State<UserListScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ListView.builder(
+              itemCount: 5,
+              itemBuilder: (context, index) => _buildUserPlaceholder(context),
+            );
           }
           if (snapshot.hasError) {
+            // Check if error is due to network issues
+            final errorString = snapshot.error.toString().toLowerCase();
+            if (errorString.contains('unavailable') ||
+                errorString.contains('unable to resolve') ||
+                errorString.contains('failed to connect') ||
+                errorString.contains('network is unreachable') ||
+                errorString.contains('no address associated')) {
+              return _buildOfflineStateWithPlaceholders(context);
+            }
             return Center(
                 child: Text('Error: ${snapshot.error}',
                     style: TextStyle(color: theme.colorScheme.error)));
@@ -226,23 +319,6 @@ class _UserListScreenState extends State<UserListScreen> {
                   final userId = userDoc.id;
                   final isFollowing = followingList.contains(userId);
 
-                  Future<bool> isBlockedByRecipient(
-                      String recipientId, String currentUserId) async {
-                    try {
-                      final blockDoc = await FirebaseFirestore.instance
-                          .collection('Blocks')
-                          .doc(recipientId)
-                          .get();
-                      List<dynamic> blockedUsers =
-                          blockDoc.data()?['blocked'] ?? [];
-                      return blockedUsers.contains(currentUserId);
-                    } catch (e) {
-                      debugPrint(
-                          'Error checking blocked status: $e');
-                      return false;
-                    }
-                  }
-
                   return FutureBuilder<DocumentSnapshot>(
                     future: FirebaseFirestore.instance
                         .collection('profiles')
@@ -254,11 +330,9 @@ class _UserListScreenState extends State<UserListScreen> {
                         return _buildUserPlaceholder(context);
                       }
                       if (profileSnapshot.hasError) {
-                        return ListTile(
-                            title: Text(
-                                'Error: ${profileSnapshot.error}',
-                                style: TextStyle(
-                                    color: theme.colorScheme.error)));
+                        // Silently skip profiles that fail to load
+                        debugPrint('Error loading profile for $userId: ${profileSnapshot.error}');
+                        return const SizedBox.shrink();
                       }
 
                       final profileData =

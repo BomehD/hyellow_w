@@ -333,6 +333,26 @@ class _CustomCardState extends State<CustomCard> {
                                   width: 132,
                                   height: 132,
                                   fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    // Fallback to default image if network image fails
+                                    return Image.asset(
+                                      'assets/default_profile_image.png',
+                                      width: 132,
+                                      height: 132,
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          isDark ? Colors.amber : Colors.orange,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               )
                                   : Hero(
