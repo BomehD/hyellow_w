@@ -15,6 +15,8 @@ import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'ai_assistant/ai_assistant_screen.dart';
 import 'home_view_preference.dart';
 import 'messaging/chat_screen.dart';
+import 'package:share_plus/share_plus.dart';
+
 
 void main() {
   runApp(const MyApp());
@@ -163,6 +165,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _shareApp() {
+    Share.share(
+      'Join me on CoPal — where connections start with common ground 🚀',
+    );
+  }
+
 
   Future<void> _openUserProfile(BuildContext context) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -257,7 +265,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 IconButton(
                   icon: Icon(Icons.search, size: 28.0, color: theme.iconTheme.color),
-                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => LiveSearchScreen())),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => LiveSearchScreen()),
+                  ),
                 ),
                 IconButton(
                   icon: Icon(Icons.person, size: 24.0, color: theme.iconTheme.color),
@@ -265,17 +276,56 @@ class _HomeScreenState extends State<HomeScreen> {
                   splashColor: Colors.transparent,
                   highlightColor: Colors.transparent,
                 ),
+
+
                 PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert, color: theme.iconTheme.color),
-                  onSelected: (value) => _onMenuSelected(value, context),
+                  onSelected: (value) {
+                    if (value == 'Share') {
+                      _shareApp();
+                    } else {
+                      _onMenuSelected(value, context);
+                    }
+                  },
                   itemBuilder: (context) => const [
-                    PopupMenuItem<String>(value: 'Option 1', child: Text('Settings')),
-                    PopupMenuItem<String>(value: 'Option 2', child: Text('Notifications')),
-                    PopupMenuItem<String>(value: 'Log out', child: Text('Log out')),
+                    PopupMenuItem<String>(
+                      value: 'Settings',
+                      child: ListTile(
+                        leading: Icon(Icons.settings),
+                        title: Text('Settings'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'Notifications',
+                      child: ListTile(
+                        leading: Icon(Icons.notifications),
+                        title: Text('Notifications'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'Share',
+                      child: ListTile(
+                        leading: Icon(Icons.share_outlined),
+                        title: Text('Share'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'Log out',
+                      child: ListTile(
+                        leading: Icon(Icons.logout),
+                        title: Text('Log out'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
                   ],
-                )
+                ),
+
               ],
             ),
+
           ),
         ],
       ),
