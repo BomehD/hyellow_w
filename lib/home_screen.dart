@@ -196,7 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _onMenuSelected(String value, BuildContext context) async {
     switch (value) {
-      case 'Option 1':
+      case 'Settings':
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -206,18 +206,27 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
-
-
         break;
-      case 'Option 2':
-        Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationScreen()));
+
+      case 'Notifications':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NotificationScreen(),
+          ),
+        );
         break;
+
       case 'Log out':
         await FirebaseAuth.instance.signOut();
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+        );
         break;
     }
   }
+
 
   @override
   void dispose() {

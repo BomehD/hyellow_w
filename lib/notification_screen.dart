@@ -106,14 +106,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black26),
+            icon: Icon(
+              Icons.settings,
+              color: Theme.of(context).iconTheme.color, // <-- dynamic color
+            ),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
               );
             },
-          ),
+          )
+
         ],
       ),
       body: StreamBuilder<List<dynamic>>(
