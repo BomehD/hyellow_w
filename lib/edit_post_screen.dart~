@@ -611,13 +611,12 @@ class _EditPostScreenState extends State<EditPostScreen> {
                         GestureDetector(
                           onTap: _showMediaPicker,
                           child: DottedBorder(
-                            options: RoundedRectDottedBorderOptions(
-                              radius: const Radius.circular(15),
-                              padding: const EdgeInsets.all(6),
-                              dashPattern: const [8, 4],
-                              strokeWidth: 1.5,
-                              color: colorScheme.onSurface.withOpacity(0.6),
-                            ),
+                            borderType: BorderType.RRect,
+                            radius: const Radius.circular(15),
+                            padding: const EdgeInsets.all(6),
+                            dashPattern: const [8, 4],
+                            color: colorScheme.onSurface.withOpacity(0.6),
+                            strokeWidth: 1.5,
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(16),
@@ -627,8 +626,7 @@ class _EditPostScreenState extends State<EditPostScreen> {
                               ),
                               child: _buildMediaPreview(),
                             ),
-                          )
-
+                          ),
                         ),
                       ],
                     ),

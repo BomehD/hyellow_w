@@ -1,22 +1,35 @@
 /* eslint-disable max-len */
+
+import { initializeApp } from "firebase-admin/app";
+
+/**
+ * 🔹 STEP 1: INITIALIZE FIREBASE FIRST
+ * This must happen before any other imports that use Firebase services.
+ */
+initializeApp();
+
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {defineSecret} from "firebase-functions/params";
-import {initializeApp} from "firebase-admin/app";
 import {GoogleGenerativeAI, Content, Part} from "@google/generative-ai";
 import axios from "axios";
 import * as functions from "firebase-functions";
+import './notifications';
 
-initializeApp();
+
 
 /** * We map the vault secret "GEMINI_API_KEY" to a local variable.
  * Now that the .env file is deleted, there is no longer a conflict.
  */
+
+
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+
 
 export const generateAiResponse = onCall({
   secrets: [GEMINI_API_KEY],
   region: "us-central1",
 }, async (request) => {
+
 
   // Auth Check
   if (!request.auth) {

@@ -832,12 +832,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 GestureDetector(
                   onTap: _showMediaPicker,
                   child: DottedBorder(
-                    borderType: BorderType.RRect,
-                    radius: const Radius.circular(15),
-                    padding: const EdgeInsets.all(6),
-                    dashPattern: const [8, 4],
-                    color: cs.onPrimary.withOpacity(0.6),
-                    strokeWidth: 1.5,
+                    options: RoundedRectDottedBorderOptions(
+                      radius: const Radius.circular(15),
+                      padding: const EdgeInsets.all(6),
+                      dashPattern: const [8, 4],
+                      strokeWidth: 1.5,
+                      color: cs.onPrimary.withOpacity(0.6),
+                    ),
                     child: Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
@@ -846,7 +847,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       ),
                       child: _buildPickedMedia(),
                     ),
-                  ),
+                  )
+
                 ),
                 SizedBox(height: _isDesktop(context) ? 25 : 20),
                 if (_isUploading)

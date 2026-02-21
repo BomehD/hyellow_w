@@ -8,8 +8,16 @@ import 'login_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'post_detail_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 final GlobalKey<ScaffoldMessengerState> snackbarKey = GlobalKey<ScaffoldMessengerState>();
+
+/// 🔹 Background FCM handler - Must be top-level
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  debugPrint('📩 Background message received: ${message.messageId}');
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +26,7 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Enable Firestore persistence
   try {
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
@@ -28,7 +37,7 @@ Future<void> main() async {
     debugPrint("⚠️ Error enabling Firestore persistence: $e");
   }
 
-  // Load saved theme mode (default: system)
+  // Load saved theme mode
   final prefs = await SharedPreferences.getInstance();
   final savedTheme = prefs.getString('themeMode') ?? 'system';
 
@@ -44,6 +53,9 @@ Future<void> main() async {
       initialThemeMode = ThemeMode.system;
   }
 
+  // Set up background message handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   runApp(MyApp(initialThemeMode: initialThemeMode));
 }
 
@@ -57,20 +69,95 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late ThemeMode _themeMode;
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
   @override
   void initState() {
     super.initState();
     _themeMode = widget.initialThemeMode;
+
+    // 🔹 Initialize Push Notification Logic
+    _initPushNotifications();
+  }
+
+  Future<void> _initPushNotifications() async {
+    // 1. Request permissions (Crucial for iOS/Android 13+)
+    NotificationSettings settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    debugPrint('User granted permission: ${settings.authorizationStatus}');
+
+    // 2. Get and save the initial FCM token
+    _getAndSaveToken();
+
+    // 3. Listen for token refreshes while the app is running
+    _messaging.onTokenRefresh.listen(_saveTokenToFirestore);
+
+    // 4. Handle Foreground messages
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('📩 Foreground message: ${message.notification?.title}');
+
+      // Show a snackbar since the system notification won't pop up while the app is open
+      if (message.notification != null) {
+        snackbarKey.currentState?.showSnackBar(
+          SnackBar(
+            content: Text("${message.notification!.title}: ${message.notification!.body}"),
+            action: SnackBarAction(
+              label: "View",
+              onPressed: () => _handleNotificationNavigation(message),
+            ),
+          ),
+        );
+      }
+    });
+
+    // 5. Handle notification taps (When app is in background)
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationNavigation);
+
+    // 6. Handle notification taps (When app was completely terminated)
+    RemoteMessage? initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleNotificationNavigation(initialMessage);
+    }
+  }
+
+  // 🔹 Centralized Navigation Logic based on notification data
+  void _handleNotificationNavigation(RemoteMessage message) {
+    final String? type = message.data['type'];
+    final String? id = message.data['id'] ?? message.data['postId'];
+
+    if (type == 'comment' || type == 'like') {
+      Navigator.pushNamed(context, '/posts/$id');
+    } else if (type == 'follow') {
+      // Assuming you have a user profile route or similar
+      Navigator.pushNamed(context, '/profile/$id');
+    }
+  }
+
+  Future<void> _getAndSaveToken() async {
+    String? token = await _messaging.getToken();
+    if (token != null) {
+      _saveTokenToFirestore(token);
+    }
+  }
+
+  Future<void> _saveTokenToFirestore(String token) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Use merge:true so we don't overwrite existing user data
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .set({'fcmToken': token}, SetOptions(merge: true));
+      debugPrint('✅ FCM token synced to Firestore');
+    }
   }
 
   Future<void> _setThemeMode(ThemeMode mode) async {
     final prefs = await SharedPreferences.getInstance();
-    String modeString = mode == ThemeMode.dark
-        ? 'dark'
-        : mode == ThemeMode.light
-        ? 'light'
-        : 'system';
+    String modeString = mode == ThemeMode.dark ? 'dark' : mode == ThemeMode.light ? 'light' : 'system';
     await prefs.setString('themeMode', modeString);
 
     setState(() {
@@ -82,73 +169,51 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     const accentColor = Color(0xFF106C70);
 
-    return MaterialApp(
-      scaffoldMessengerKey: snackbarKey,
-      title: 'CoPal',
-      theme: ThemeData(
-        brightness: Brightness.light,
+    // Reusable theme data function to avoid duplication
+    ThemeData buildTheme(Brightness brightness) {
+      bool isDark = brightness == Brightness.dark;
+      return ThemeData(
+        brightness: brightness,
         colorScheme: ColorScheme.fromSeed(
           seedColor: accentColor,
-          brightness: Brightness.light,
+          brightness: brightness,
         ),
-        scaffoldBackgroundColor: Colors.white,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent, // Transparent action bar
-          elevation: 0, // Remove shadow
-          foregroundColor: accentColor, // Icons & text
-        ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: accentColor,
-          foregroundColor: Colors.white,
-        ),
-        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-          selectedItemColor: accentColor,
-          unselectedItemColor: Colors.grey,
-        ),
-        textSelectionTheme: TextSelectionThemeData(
-          cursorColor: accentColor,
-          selectionColor: accentColor.withOpacity(0.3),
-          selectionHandleColor: accentColor,
-        ),
-        progressIndicatorTheme: const ProgressIndicatorThemeData(
-          color: accentColor,
-        ),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: accentColor,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: Colors.black,
+        scaffoldBackgroundColor: isDark ? Colors.black : Colors.white,
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
           elevation: 0,
           foregroundColor: accentColor,
         ),
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: accentColor,
-          foregroundColor: Colors.black,
+          foregroundColor: isDark ? Colors.black : Colors.white,
         ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           selectedItemColor: accentColor,
           unselectedItemColor: Colors.grey,
         ),
         textSelectionTheme: TextSelectionThemeData(
-          cursorColor: Colors.tealAccent,
-          selectionColor: Colors.tealAccent.withOpacity(0.3),
-          selectionHandleColor: Colors.tealAccent,
+          cursorColor: isDark ? Colors.tealAccent : accentColor,
+          selectionColor: (isDark ? Colors.tealAccent : accentColor).withOpacity(0.3),
+          selectionHandleColor: isDark ? Colors.tealAccent : accentColor,
         ),
-        progressIndicatorTheme: const ProgressIndicatorThemeData(
-          color: Colors.tealAccent,
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: isDark ? Colors.tealAccent : accentColor,
         ),
-      ),
+      );
+    }
+
+    return MaterialApp(
+      scaffoldMessengerKey: snackbarKey,
+      title: 'CoPal',
+      theme: buildTheme(Brightness.light),
+      darkTheme: buildTheme(Brightness.dark),
       themeMode: _themeMode,
-      initialRoute: '/',
       onGenerateRoute: (settings) {
         final uri = Uri.parse(settings.name ?? '/');
         final isLoggedIn = FirebaseAuth.instance.currentUser != null;
 
+        // Handle Dynamic Routes for Notifications (e.g., /posts/123)
         if (uri.pathSegments.length == 2 && uri.pathSegments[0] == 'posts') {
           final postId = uri.pathSegments[1];
           return MaterialPageRoute(
@@ -178,100 +243,9 @@ class _MyAppState extends State<MyApp> {
             onThemeChanged: _setThemeMode,
             currentThemeMode: _themeMode,
           )
-              : LoginScreen(),
+              : const LoginScreen(),
           settings: settings,
         );
-      },
-    );
-  }
-
-
-}
-
-class CorrectedAuthCheck extends StatefulWidget {
-  final Function(ThemeMode) onThemeChanged;
-  final ThemeMode currentThemeMode;
-
-  const CorrectedAuthCheck({
-    super.key,
-    required this.onThemeChanged,
-    required this.currentThemeMode,
-  });
-
-  @override
-  _CorrectedAuthCheckState createState() => _CorrectedAuthCheckState();
-}
-
-class _CorrectedAuthCheckState extends State<CorrectedAuthCheck> with WidgetsBindingObserver {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
-      _updateLastSeen(user.uid);
-    } else if (state == AppLifecycleState.resumed) {
-      _updateLastSeen(user.uid);
-    }
-  }
-
-  Future<void> _updateLastSeen(String uid) async {
-    try {
-      await _firestore.collection('users').doc(uid).update({
-        'last_seen': FieldValue.serverTimestamp(),
-      });
-      debugPrint("Updated last_seen for $uid on app lifecycle change.");
-    } catch (e) {
-      debugPrint("Error updating last_seen: $e");
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: _auth.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(color: Colors.teal),
-            ),
-          );
-        } else if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(
-              child: Text(
-                'Error checking authentication: ${snapshot.error}',
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
-        } else {
-          final User? user = snapshot.data;
-          if (user != null) {
-            _updateLastSeen(user.uid);
-            return HomeScreen(
-              onThemeChanged: widget.onThemeChanged,
-              currentThemeMode: widget.currentThemeMode,
-            );
-          } else {
-            return LoginScreen();
-          }
-        }
       },
     );
   }
