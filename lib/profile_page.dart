@@ -85,18 +85,49 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _pickImage() async {
+    // 1. Show a dialog to choose between Camera and Gallery
+    ImageSource? source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (BuildContext context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_library),
+              title: Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: Icon(Icons.camera_alt),
+              title: Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return; // User cancelled
+
     if (kIsWeb) {
+      // Web handles both sources via the browser's file picker
       FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
       if (result != null && result.files.first.bytes != null) {
-        _profileImageWeb = result.files.first.bytes;
-        setState(() {});
+        setState(() {
+          _profileImageWeb = result.files.first.bytes;
+        });
       }
     } else {
+      // Mobile uses the source selected from the bottom sheet
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 50, // Optional: reduces file size for Firebase Storage
+      );
+
       if (pickedFile != null) {
-        _profileImageFile = File(pickedFile.path);
-        setState(() {});
+        setState(() {
+          _profileImageFile = File(pickedFile.path);
+        });
       }
     }
   }
@@ -153,6 +184,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'name': _nameController.text,
         'name_lower': _nameController.text.toLowerCase(),
         'interest': _selectedInterest ?? "Not specified",
+        'profileImage': finalImageUrl, // <--- ADD THIS LINE
       }, SetOptions(merge: true));
 
       // ✅ Navigate to ProfileView with updated data

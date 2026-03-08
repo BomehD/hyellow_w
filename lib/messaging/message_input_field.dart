@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:hyellow_w/messaging/message.dart'; // Import the Message model
+import 'package:hyellow_w/messaging/message.dart';
 
-class MessageInputField extends StatelessWidget {
+class MessageInputField extends StatefulWidget {
   final TextEditingController messageController;
   final FocusNode messageFocusNode;
   final Message? replyingToMessage;
   final String? editingMessageId;
   final String friendName;
   final String currentUserId;
-  final VoidCallback onSendMessage;
+  final Future<void> Function() onSendMessage;
   final VoidCallback onClearReplyingTo;
   final VoidCallback onAttachMedia;
 
@@ -26,13 +26,38 @@ class MessageInputField extends StatelessWidget {
   });
 
   @override
+  State<MessageInputField> createState() => _MessageInputFieldState();
+}
+
+class _MessageInputFieldState extends State<MessageInputField> {
+  bool _isSending = false;
+
+  Future<void> _handleSend() async {
+    final text = widget.messageController.text.trim();
+
+    if (text.isEmpty || _isSending) return;
+
+    setState(() {
+      _isSending = true;
+    });
+
+    try {
+      await widget.onSendMessage();
+    } finally {
+      setState(() {
+        _isSending = false;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return Column(
       children: [
-        if (replyingToMessage != null)
+        if (widget.replyingToMessage != null)
           Container(
             padding: const EdgeInsets.all(8.0),
             color: colorScheme.surfaceVariant,
@@ -43,7 +68,7 @@ class MessageInputField extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Replying to: ${replyingToMessage!.senderId == currentUserId ? "You" : friendName}',
+                        'Replying to: ${widget.replyingToMessage!.senderId == widget.currentUserId ? "You" : widget.friendName}',
                         style: textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
@@ -51,7 +76,7 @@ class MessageInputField extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        replyingToMessage!.content,
+                        widget.replyingToMessage!.content,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.bodySmall?.copyWith(
@@ -64,11 +89,12 @@ class MessageInputField extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Icon(Icons.close, color: colorScheme.onSurfaceVariant),
-                  onPressed: onClearReplyingTo,
+                  onPressed: widget.onClearReplyingTo,
                 ),
               ],
             ),
           ),
+
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Container(
@@ -89,12 +115,13 @@ class MessageInputField extends StatelessWidget {
               children: [
                 IconButton(
                   icon: Icon(Icons.attach_file, color: colorScheme.onSurfaceVariant),
-                  onPressed: onAttachMedia,
+                  onPressed: widget.onAttachMedia,
                 ),
+
                 Expanded(
                   child: TextField(
-                    controller: messageController,
-                    focusNode: messageFocusNode,
+                    controller: widget.messageController,
+                    focusNode: widget.messageFocusNode,
                     minLines: 1,
                     maxLines: 5,
                     keyboardType: TextInputType.multiline,
@@ -105,7 +132,10 @@ class MessageInputField extends StatelessWidget {
                         color: colorScheme.onSurfaceVariant,
                       ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
                     ),
                     style: textTheme.bodyMedium?.copyWith(
                       fontSize: 16,
@@ -113,12 +143,15 @@ class MessageInputField extends StatelessWidget {
                     ),
                   ),
                 ),
+
                 IconButton(
                   icon: Icon(
-                    editingMessageId != null ? Icons.check : Icons.send,
-                    color: colorScheme.primary,
+                    widget.editingMessageId != null ? Icons.check : Icons.send,
+                    color: _isSending
+                        ? colorScheme.onSurfaceVariant
+                        : colorScheme.primary,
                   ),
-                  onPressed: onSendMessage,
+                  onPressed: _isSending ? null : _handleSend,
                 ),
               ],
             ),

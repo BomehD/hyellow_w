@@ -213,15 +213,13 @@ class _PeopleAndPostsScreenState extends State<PeopleAndPostsScreen> {
           preferredSize: const Size.fromHeight(1.0),
           child: Container(
             color: theme.brightness == Brightness.dark
-                ? Colors.grey[800] // darker divider in dark mode
-                : Colors.grey[300], // lighter divider in light mode
+                ? Colors.grey[800]
+                : Colors.grey[300],
             height: 1.0,
           ),
         ),
       ),
-
       backgroundColor: theme.colorScheme.surface,
-
       body: Container(
         child: Center(
           child: SizedBox(
@@ -231,6 +229,20 @@ class _PeopleAndPostsScreenState extends State<PeopleAndPostsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- ALERT TEXT (PLAIN) ---
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 12.0),
+                    child: Text(
+                      "These filters apply to your Interests feed, not your personal feed.",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.grey[300] : Colors.grey[800],
+                      ),
+                    ),
+                  ),
+
+                  // --- SORT POSTS BY ---
                   Text(
                     "Sort Posts By:",
                     style: TextStyle(
@@ -243,7 +255,10 @@ class _PeopleAndPostsScreenState extends State<PeopleAndPostsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     decoration: BoxDecoration(
-                      border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300, width: 1.5),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                        width: 1.5,
+                      ),
                       borderRadius: BorderRadius.zero,
                       color: theme.cardColor,
                       boxShadow: [
@@ -259,8 +274,10 @@ class _PeopleAndPostsScreenState extends State<PeopleAndPostsScreen> {
                       child: DropdownButton<String>(
                         value: sortBy,
                         isExpanded: true,
-                        icon: Icon(Icons.keyboard_arrow_down_rounded,
-                            color: isDark ? Colors.grey[300] : Colors.grey),
+                        icon: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: isDark ? Colors.grey[300] : Colors.grey,
+                        ),
                         style: TextStyle(
                           fontSize: 15,
                           color: isDark ? Colors.white : Colors.black87,
@@ -278,6 +295,8 @@ class _PeopleAndPostsScreenState extends State<PeopleAndPostsScreen> {
                     ),
                   ),
                   const SizedBox(height: 25),
+
+                  // --- COUNTRY SELECTORS ---
                   _buildCountrySelector(
                     label: "Filter Posts by Country:",
                     selected: selectedPostCountries,
@@ -292,13 +311,15 @@ class _PeopleAndPostsScreenState extends State<PeopleAndPostsScreen> {
                     onChanged: (set) => setState(() => selectedUserCountries = set),
                   ),
                   const Spacer(),
+
+                  // --- SAVE BUTTON ---
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () async {
                         await _savePreferences();
                         if (!mounted) return;
-                        Navigator.pop(context);
+                        Navigator.pop(context, true);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,

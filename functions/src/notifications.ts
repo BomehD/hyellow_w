@@ -2,14 +2,9 @@ import * as functions from "firebase-functions/v2";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 
-/**
- * 🔹 Lazy initialization ensures the Firebase App is fully
- * initialized in index.ts before these services are accessed.
- */
 const db = () => getFirestore();
 const messaging = () => getMessaging();
 
-// Helper for Push Notifications
 async function sendPush(toUserId: string, title: string, body: string, data: any) {
     const userSnap = await db().collection("users").doc(toUserId).get();
     const token = userSnap.data()?.fcmToken;
@@ -18,8 +13,21 @@ async function sendPush(toUserId: string, title: string, body: string, data: any
         try {
             await messaging().send({
                 notification: { title, body },
-                data: { ...data, click_action: "FLUTTER_NOTIFICATION_CLICK" },
+                // 1. ADDED id AND postId TO MATCH YOUR FLUTTER onGenerateRoute
+                data: {
+                    ...data,
+                    id: data.id || "",
+                    postId: data.id || "",
+                    click_action: "FLUTTER_NOTIFICATION_CLICK"
+                },
                 token: token,
+                // 2. FORCE HIGH PRIORITY FOR HEADS-UP DISPLAY
+                android: {
+                    priority: "high",
+                    notification: {
+                        channelId: "high_importance_channel",
+                    },
+                },
             });
         } catch (error) {
             console.error("Push Error:", error);
@@ -36,12 +44,7 @@ export const onLikeCreated = functions.firestore.onDocumentCreated("posts/{postI
     if (!authorId || authorId === userId) return;
 
     await db().collection("notifications").add({
-        type: "like",
-        fromUserId: userId,
-        toUserId: authorId,
-        postId,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
+        type: "like", fromUserId: userId, toUserId: authorId, postId, createdAt: FieldValue.serverTimestamp(), read: false,
     });
 
     const senderSnap = await db().collection("users").doc(userId).get();
@@ -53,7 +56,6 @@ export const onLikeCreated = functions.firestore.onDocumentCreated("posts/{postI
 export const onCommentCreated = functions.firestore.onDocumentCreated("posts/{postId}/comments/{commentId}", async (event) => {
     const data = event.data?.data();
     if (!data) return;
-
     const { postId } = event.params;
     const postSnap = await db().collection("posts").doc(postId).get();
     const authorId = postSnap.data()?.authorId;
@@ -61,12 +63,7 @@ export const onCommentCreated = functions.firestore.onDocumentCreated("posts/{po
     if (!authorId || data.userId === authorId) return;
 
     await db().collection("notifications").add({
-        type: "comment",
-        fromUserId: data.userId,
-        toUserId: authorId,
-        postId,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
+        type: "comment", fromUserId: data.userId, toUserId: authorId, postId, createdAt: FieldValue.serverTimestamp(), read: false,
     });
 
     const senderSnap = await db().collection("users").doc(data.userId).get();
@@ -83,11 +80,7 @@ export const onFollowUpdated = functions.firestore.onDocumentWritten("Friends/{u
     if (!newFollowedId) return;
 
     await db().collection("notifications").add({
-        type: "follow",
-        fromUserId: event.params.userId,
-        toUserId: newFollowedId,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
+        type: "follow", fromUserId: event.params.userId, toUserId: newFollowedId, createdAt: FieldValue.serverTimestamp(), read: false,
     });
 
     const senderSnap = await db().collection("users").doc(event.params.userId).get();
@@ -101,12 +94,7 @@ export const onMessageCreated = functions.firestore.onDocumentCreated("chats/{ch
     if (!data) return;
 
     await db().collection("notifications").add({
-        type: "message",
-        fromUserId: data.senderId,
-        toUserId: data.receiverId,
-        chatId: event.params.chatId,
-        createdAt: FieldValue.serverTimestamp(),
-        read: false,
+        type: "message", fromUserId: data.senderId, toUserId: data.receiverId, chatId: event.params.chatId, createdAt: FieldValue.serverTimestamp(), read: false,
     });
 
     const senderSnap = await db().collection("users").doc(data.senderId).get();

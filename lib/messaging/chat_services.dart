@@ -239,51 +239,54 @@ class ChatService {
     try {
       final chatRef = _firestore.collection('chats').doc(chatId);
       final messageRef = chatRef.collection('messages').doc(messageId);
-      final chatDoc = await chatRef.get();
-      final lastMessageAt = chatDoc.data()?['lastMessageAt'] as Timestamp?;
-      final deletedMessageSnapshot = await messageRef.get();
-      final deletedMessageData = deletedMessageSnapshot.data();
-      final deletedMessageTimestamp = deletedMessageData?['timestamp'] as Timestamp?;
 
+      // Delete the message first
       await messageRef.delete();
 
-      // Check if the deleted message was the latest one
-      if (lastMessageAt != null && deletedMessageTimestamp != null && lastMessageAt.toDate().isAtSameMomentAs(deletedMessageTimestamp.toDate())) {
-        // Query for the new latest message after the deletion
-        final messagesSnapshot = await chatRef
-            .collection('messages')
-            .orderBy('timestamp', descending: true)
-            .limit(1)
-            .get();
+      // Fetch the newest remaining message
+      final messagesSnapshot = await chatRef
+          .collection('messages')
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .get();
 
-        if (messagesSnapshot.docs.isNotEmpty) {
-          final newLastMessageDoc = messagesSnapshot.docs.first;
-          final newLastMessageData = newLastMessageDoc.data();
-          String newLastMessageContent = newLastMessageData['content'] ?? (newLastMessageData['mediaType'] != null ? '[${newLastMessageData['mediaType'].toUpperCase()}]' : 'Message deleted');
+      if (messagesSnapshot.docs.isNotEmpty) {
+        final newLastMessageDoc = messagesSnapshot.docs.first;
+        final data = newLastMessageDoc.data();
 
-          await chatRef.update({
-            'lastMessage': newLastMessageContent,
-            'lastMessageAt': newLastMessageData['timestamp'],
-            'lastMessageSenderId': newLastMessageData['senderId'],
-          });
+        String newLastMessage = '';
+
+        if (data['content'] != null && data['content'].toString().isNotEmpty) {
+          newLastMessage = data['content'];
+        } else if (data['mediaType'] != null) {
+          newLastMessage = '[${data['mediaType'].toUpperCase()}]';
         } else {
-          // No messages are left, so clear the last message fields
-          await chatRef.update({
-            'lastMessage': '',
-            'lastMessageAt': null,
-            'lastMessageSenderId': null,
-          });
+          newLastMessage = '';
         }
+
+        await chatRef.update({
+          'lastMessage': newLastMessage,
+          'lastMessageAt': data['timestamp'],
+          'lastMessageSenderId': data['senderId'],
+        });
+      } else {
+        // No messages left
+        await chatRef.update({
+          'lastMessage': '',
+          'lastMessageAt': null,
+          'lastMessageSenderId': null,
+        });
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Message deleted.')),
       );
     } catch (e) {
+      debugPrint('Error deleting message: $e');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete message: $e')),
       );
-      debugPrint('Error deleting message: $e');
     }
   }
 

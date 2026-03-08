@@ -152,7 +152,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
     });
   }
 
-  void _sendMessage({String? mediaUrl, String? mediaType}) async {
+  Future<void> _sendMessage({String? mediaUrl, String? mediaType}) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return;
 

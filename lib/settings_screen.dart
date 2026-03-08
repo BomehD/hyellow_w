@@ -150,11 +150,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('Filter by country, trending, etc.',
                 style: TextStyle(fontSize: 12, color: Colors.grey)),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const PeopleAndPostsScreen()),
               );
+
+              if (result == true && context.mounted) {
+                Navigator.pop(context, true);
+              }
             },
           ),
           const Divider(height: 1),

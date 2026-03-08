@@ -15,7 +15,5 @@
 
     firebase deploy --only functions
 
-    Here Is the complete chat bubble file, help me search for the likely culprits:
-
  **/
 

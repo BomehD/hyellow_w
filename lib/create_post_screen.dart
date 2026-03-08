@@ -445,14 +445,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       String interestField = _selectedInterest ?? defaultInterest;
 
       final countryData = userData['country'];
-      List<String> userCountries;
+      String userCountry;
 
       if (countryData is String) {
-        userCountries = [countryData];
-      } else if (countryData is List) {
-        userCountries = List<String>.from(countryData);
+        userCountry = countryData;
+      } else if (countryData is List && countryData.isNotEmpty) {
+        userCountry = countryData.first;
       } else {
-        userCountries = ['Unknown'];
+        userCountry = 'Unknown';
       }
 
       // FIX: Ensure only one of 'imageUrls' or 'videoUrl' is saved.
@@ -467,7 +467,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         'commentCount': 0,
         'interest': interestField,
         'userDefaultInterest': defaultInterest,
-        'country': userCountries,
+        'country': userCountry,
         'commentsEnabled': true,
         'visibility': 'public',
       };

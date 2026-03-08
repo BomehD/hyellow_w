@@ -167,7 +167,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _shareApp() {
     Share.share(
-      'Join me on CoPal — where connections start with common ground 🚀',
+      'Join me on CoPal — where connections start with common ground 🚀\n\n'
+          'Discover people who share your passions.\n'
+          'Try it here:\n'
+          'https://copal.web.app',
     );
   }
 
@@ -197,7 +200,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _onMenuSelected(String value, BuildContext context) async {
     switch (value) {
       case 'Settings':
-        Navigator.push(
+      // 1. Capture the result from the SettingsScreen
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => SettingsScreen(
@@ -206,6 +210,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
+
+        // 2. If result is true, it means filters were changed!
+        if (result == true) {
+          _loadHomeViewPreference(); // This forces the Home views to rebuild with new filters
+        }
         break;
 
       case 'Notifications':

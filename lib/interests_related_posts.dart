@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hyellow_w/post_widget.dart';
 import 'package:hyellow_w/user_list_screen.dart';
 import 'package:hyellow_w/edit_post_screen.dart';
@@ -125,21 +125,39 @@ class _InterestsRelatedPostsState extends State<InterestsRelatedPosts> {
     }
   }
 
-  void _setupPostsStream() {
+// 2. Modify this method in your _InterestsRelatedPostsState
+  void _setupPostsStream() async {
     _postsSubscription?.cancel();
-    if (_blockedUserIds.length > 10) {
-      print('Warning: `whereNotIn` has a limit of 10. Consider splitting your query for blocked users.');
+
+    // Load preferences
+    final prefs = await SharedPreferences.getInstance();
+    final String sortBy = prefs.getString('post_sort_by') ?? 'recent';
+    final List<String> selectedCountries = prefs.getStringList('post_country_filter') ?? [];
+
+    Query query = FirebaseFirestore.instance.collection('posts')
+        .where('interest', isEqualTo: widget.initialInterest);
+
+    // Apply Country Filter (if user selected any)
+    if (selectedCountries.isNotEmpty) {
+      // Firestore array-contains-any supports up to 10 values
+      query = query.where('country', arrayContainsAny: selectedCountries.take(10).toList());
     }
 
-    final blockedList = _blockedUserIds.toList();
+    // Apply Sorting
+    if (sortBy == 'popular') {
+      // Make sure your post documents have a 'likeCount' field!
+      query = query.orderBy('likeCount', descending: true);
+    } else {
+      query = query.orderBy('timestamp', descending: true);
+    }
 
-    _postsSubscription = FirebaseFirestore.instance
-        .collection('posts')
-        .where('interest', isEqualTo: widget.initialInterest)
-        .where('authorId', whereNotIn: blockedList.isEmpty ? [''] : blockedList)
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .listen(_onPostsChanged);
+    // Handle blocked users logic
+    final blockedList = _blockedUserIds.toList();
+    if (blockedList.isNotEmpty) {
+      query = query.where('authorId', whereNotIn: blockedList.take(10).toList());
+    }
+
+    _postsSubscription = query.snapshots().listen(_onPostsChanged);
   }
 
   void _onPostsChanged(QuerySnapshot snapshot) async {
@@ -242,14 +260,25 @@ class _InterestsRelatedPostsState extends State<InterestsRelatedPosts> {
       return isVisible && !_hiddenPostIds.contains(postId) && !_mutedUserIds.contains(authorId);
     }).toList();
 
-    filteredPosts.sort((a, b) {
-      final tsA = a['timestamp'] as Timestamp?;
-      final tsB = b['timestamp'] as Timestamp?;
-      if (tsA == null && tsB == null) return 0;
-      if (tsA == null) return 1;
-      if (tsB == null) return -1;
-      return tsB.compareTo(tsA);
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final sortBy = prefs.getString('post_sort_by') ?? 'recent';
+
+    if (sortBy == 'popular') {
+      filteredPosts.sort((a, b) {
+        final likesA = a['likeCount'] ?? 0;
+        final likesB = b['likeCount'] ?? 0;
+        return likesB.compareTo(likesA);
+      });
+    } else {
+      filteredPosts.sort((a, b) {
+        final tsA = a['timestamp'] as Timestamp?;
+        final tsB = b['timestamp'] as Timestamp?;
+        if (tsA == null && tsB == null) return 0;
+        if (tsA == null) return 1;
+        if (tsB == null) return -1;
+        return tsB.compareTo(tsA);
+      });
+    }
 
     return filteredPosts;
   }
@@ -257,16 +286,27 @@ class _InterestsRelatedPostsState extends State<InterestsRelatedPosts> {
   Future<void> _refreshFilteredPosts() async {
     if (!mounted || _currentUser == null) return;
 
-    await _loadUsersWhoBlockedMe(); // Re-fetch the list of users who have blocked me
+    await _loadUsersWhoBlockedMe();
 
-    final blockedList = _blockedUserIds.toList();
+    final prefs = await SharedPreferences.getInstance();
+    final String sortBy = prefs.getString('post_sort_by') ?? 'recent';
+    final List<String> selectedCountries = prefs.getStringList('post_country_filter') ?? [];
 
-    final postsSnapshot = await FirebaseFirestore.instance
-        .collection('posts')
-        .where('interest', isEqualTo: widget.initialInterest)
-        .where('authorId', whereNotIn: blockedList.isEmpty ? [''] : blockedList)
-        .orderBy('timestamp', descending: true)
-        .get();
+    Query query = FirebaseFirestore.instance.collection('posts')
+        .where('interest', isEqualTo: widget.initialInterest);
+
+    if (selectedCountries.isNotEmpty) {
+      // Firestore array-contains-any supports up to 10 values
+      query = query.where('country', arrayContainsAny: selectedCountries.take(10).toList());
+    }
+
+    if (sortBy == 'popular') {
+      query = query.orderBy('likeCount', descending: true);
+    } else {
+      query = query.orderBy('timestamp', descending: true);
+    }
+
+    final postsSnapshot = await query.get();
 
     List<QueryDocumentSnapshot> newFilteredPosts = await _filterPosts(postsSnapshot.docs);
     final newAuthorIds = newFilteredPosts.map((p) => p['authorId'] as String).toSet();
