@@ -474,10 +474,6 @@ class _InterestsRelatedPostsState extends State<InterestsRelatedPosts> {
       ),
       actions: [
         IconButton(
-          icon: Icon(Icons.refresh, color: iconColor),
-          onPressed: () => _refreshFilteredPosts(),
-        ),
-        IconButton(
           icon: Icon(Icons.people, color: iconColor),
           onPressed: () {
             Navigator.push(

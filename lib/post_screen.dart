@@ -577,11 +577,12 @@ class _PostScreenState extends State<PostScreen> {
             ),
           ),
         )
-            : RefreshIndicator(
+        :RefreshIndicator(
           color: Colors.teal,
           backgroundColor: Colors.black,
-          onRefresh: () => _fetchAndFilterPosts(),
+          onRefresh: _fetchAndFilterPosts,
           child: ListView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             itemCount: posts.length,
             itemBuilder: (context, index) {
               final postDoc = posts[index];
@@ -591,6 +592,7 @@ class _PostScreenState extends State<PostScreen> {
               final timestamp = postData['timestamp'] as Timestamp?;
               final visibility = postData['visibility'] as String? ?? 'public';
               final commentsEnabled = postData['commentsEnabled'] as bool? ?? true;
+
               final userInfo = authorData[authorId] ?? {};
               final authorName = userInfo['name'] as String? ?? 'Unknown';
               final profileImageUrl = userInfo['profileImage'] as String?;
@@ -598,12 +600,10 @@ class _PostScreenState extends State<PostScreen> {
               final authorTitle = userInfo['title'] as String? ?? '';
               final authorPhone = userInfo['phone'] as String? ?? '';
               final authorEmail = userInfo['email'] as String? ?? '';
-              final videoUrl = postData['videoUrl'] as String?;
 
-              // NEW: Get the list of imageUrls.
+              final videoUrl = postData['videoUrl'] as String?;
               final imageUrls = postData['imageUrls'] as List<dynamic>?;
 
-              // NEW: Get the blocked status for this specific author
               final isBlockedByAuthor = _blockedByAuthors[authorId] ?? false;
 
               print('➡️ [PostScreenState] Building PostWidget for post ID: $postId at index $index');
@@ -612,6 +612,7 @@ class _PostScreenState extends State<PostScreen> {
                 future: _checkIfLiked(postId, currentUserId),
                 builder: (context, snapshot) {
                   final liked = snapshot.data ?? false;
+
                   return PostWidget(
                     key: PageStorageKey(postId),
                     postId: postId,
@@ -621,7 +622,7 @@ class _PostScreenState extends State<PostScreen> {
                     interest: postData['interest'] as String? ?? 'General',
                     imageUrl: postData['imageUrl'] as String?,
                     videoUrl: videoUrl,
-                    imageUrls: imageUrls?.cast<String>(), // NEW: Pass the imageUrls list
+                    imageUrls: imageUrls?.cast<String>(),
                     timestamp: timestamp ?? Timestamp.now(),
                     authorName: authorName,
                     profileImageUrl: profileImageUrl,
@@ -646,13 +647,14 @@ class _PostScreenState extends State<PostScreen> {
                     onUserMuted: _handlePostAction,
                     onUserBlocked: _handlePostAction,
                     initiallyBookmarked: false,
-                    isBlockedByAuthor: isBlockedByAuthor, // NEW: Pass the flag
+                    isBlockedByAuthor: isBlockedByAuthor,
                   );
                 },
               );
             },
           ),
-        ),
+        )
+
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

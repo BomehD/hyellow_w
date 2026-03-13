@@ -170,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'Join me on CoPal — where connections start with common ground 🚀\n\n'
           'Discover people who share your passions.\n'
           'Try it here:\n'
-          'https://copal.web.app',
+          'https://copalnet.com',
     );
   }
 
